@@ -116,7 +116,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect to the data endpoint with the access token
 	if tokenResponse.AccessToken != "" {
-		route := fmt.Sprintf("http://localhost:3000/data?access_token=%s", tokenResponse.AccessToken)
+		route := fmt.Sprintf("http://localhost:3000?access_token=%s", tokenResponse.AccessToken)
 		fmt.Println(fmt.Sprintf("Redirecting to: %s", route))
 		http.Redirect(w, r, route, http.StatusFound)
 		return
@@ -180,6 +180,37 @@ func data(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Data function took %s\n", elapsed)
 }
 
+func user(w http.ResponseWriter, r *http.Request) {
+	// Add CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	// Handle preflight OPTIONS request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	fmt.Println("Running func: /user")
+	accessToken := r.URL.Query().Get("access_token")
+	if accessToken == "" {
+		http.Error(w, "No access token provided", http.StatusBadRequest)
+		return
+	}
+
+	userProfileBody, err := GetUserProfile(accessToken)
+	if err != nil {
+		log.Printf("Error getting user profile: %v", err)
+		http.Error(w, "Failed to fetch user data", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(userProfileBody)
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -190,5 +221,6 @@ func main() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/data", data)
+	http.HandleFunc("/user", user)
 	http.ListenAndServe(":3024", nil)
 }

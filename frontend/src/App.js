@@ -7,7 +7,10 @@ import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Image } from 'primereact/image';
 
+import { getUserProfile } from './helpers/api.js';
+
 import Login from './components/Login.js';
+import UserProfile from './components/UserProfile.js';
 import githubMark from './images/github-mark.svg';
 
 function App() {
@@ -21,18 +24,26 @@ function App() {
   };
 
   useEffect(() => {
-    // Check URL for access token first
-    const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    
-    if (accessToken) {
-      // Store the token and clean up URL
-      localStorage.setItem('access_token', accessToken);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    const fetchUserData = async () => {
+      // Check URL for access token first
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
 
-    let authed = (accessToken || localStorage.getItem('access_token')) ? true : false;
-    setIsAuthenticated(authed);
+      if (accessToken) {
+        // Store the token and clean up URL
+        localStorage.setItem('access_token', accessToken);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      let authed = (accessToken || localStorage.getItem('access_token')) ? true : false;
+      if (authed) {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+      }
+      setIsAuthenticated(authed);
+    };
+
+    fetchUserData();
   }, []);
 
   if (!isAuthenticated) {
@@ -78,7 +89,7 @@ function App() {
           {userProfile && (
             <div className="user-section" style={{ marginBottom: '30px' }}>
               <h2>Welcome, {userProfile.display_name}!</h2>
-              {/* <UserProfile user={userProfile} /> */}
+              <UserProfile user={userProfile} />
             </div>
           )}
           

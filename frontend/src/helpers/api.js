@@ -3,7 +3,8 @@ const API_BASE = 'http://localhost:3024'
 
 export const getUserProfile = async () => {
     try {
-        const response = await fetch(`${API_BASE}/spotify/me`, {
+        const accessToken = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE}/user?access_token=${accessToken}`, {
             method: 'GET',
             credentials: 'include',
             headers: {
