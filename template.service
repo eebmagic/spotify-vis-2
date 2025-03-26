@@ -1,0 +1,11 @@
+[Unit]
+Description=Simple web-page for posting links
+After=network.target
+
+[Service]
+ExecStart=/root/.nix-profile/bin/nix-shell
+Restart=always
+WorkingDirectory=/root/Projects/link-board
+
+[Install]
+WantedBy=multi-user.target
