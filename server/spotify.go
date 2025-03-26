@@ -1,9 +1,14 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 )
 
 const (
@@ -73,4 +78,48 @@ func GetUserPlaylists(accessToken string, userID string) ([]byte, error) {
 	}
 
 	return body, nil
-} 
+}
+
+// RefreshAccessToken refreshes an access token using a refresh token
+func RefreshAccessToken(refreshToken string) (SpotifyTokenResponse, error) {
+	tokenUrl := "https://accounts.spotify.com/api/token"
+
+	// Prepare the form data
+	formData := url.Values{}
+	formData.Set("grant_type", "refresh_token")
+	formData.Set("refresh_token", refreshToken)
+
+	// Create the request
+	req, err := http.NewRequest("POST", tokenUrl, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return SpotifyTokenResponse{}, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	authString := fmt.Sprintf("%s:%s", os.Getenv("SPOTIFY_CLIENT_ID"), os.Getenv("SPOTIFY_CLIENT_SECRET"))
+	encodedAuth := base64.StdEncoding.EncodeToString([]byte(authString))
+	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", encodedAuth))
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return SpotifyTokenResponse{}, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return SpotifyTokenResponse{}, fmt.Errorf("Spotify API returned non-200 status: %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Parse the response
+	var tokenResponse SpotifyTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		return SpotifyTokenResponse{}, fmt.Errorf("error decoding response: %v", err)
+	}
+
+	return tokenResponse, nil
+}

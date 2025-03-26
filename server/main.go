@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"go.etcd.io/bbolt"
 )
 
 // Add this struct to hold the token response
@@ -114,9 +115,17 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Expires In: %d seconds\n", tokenResponse.ExpiresIn)
 	fmt.Printf("Scope: %s\n", tokenResponse.Scope)
 
-	// Redirect to the data endpoint with the access token
+	// Store the token in bbolt and get a session ID
 	if tokenResponse.AccessToken != "" {
-		route := fmt.Sprintf("http://localhost:3000?access_token=%s", tokenResponse.AccessToken)
+		sessionID, err := StoreSession(db, tokenResponse)
+		if err != nil {
+			log.Printf("Error storing session: %v", err)
+			http.Error(w, "Failed to create session", http.StatusInternalServerError)
+			return
+		}
+
+		// Redirect to the frontend with the session ID instead of the token
+		route := fmt.Sprintf("http://localhost:3000?session_id=%s", sessionID)
 		fmt.Println(fmt.Sprintf("Redirecting to: %s", route))
 		http.Redirect(w, r, route, http.StatusFound)
 		return
@@ -129,13 +138,22 @@ func callback(w http.ResponseWriter, r *http.Request) {
 func data(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	fmt.Println("\n\nRunning func: /data")
-	accessToken := r.URL.Query().Get("access_token")
-	if accessToken == "" {
-		http.Error(w, "No access token provided", http.StatusBadRequest)
+	sessionID := r.URL.Query().Get("session_id")
+	if sessionID == "" {
+		http.Error(w, "No session ID provided", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println(fmt.Sprintf("Access token: %s", accessToken))
+	// Get the session from bbolt
+	session, err := GetSession(db, sessionID)
+	if err != nil {
+		log.Printf("Error retrieving session: %v", err)
+		http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken := session.Token.AccessToken
+	fmt.Println(fmt.Sprintf("Retrieved access token for session: %s", sessionID))
 
 	// Use the new GetUserProfile helper
 	userProfileBody, err := GetUserProfile(accessToken)
@@ -194,12 +212,21 @@ func user(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("Running func: /user")
-	accessToken := r.URL.Query().Get("access_token")
-	if accessToken == "" {
-		http.Error(w, "No access token provided", http.StatusBadRequest)
+	sessionID := r.URL.Query().Get("session_id")
+	if sessionID == "" {
+		http.Error(w, "No session ID provided", http.StatusBadRequest)
 		return
 	}
 
+	// Get the session from bbolt
+	session, err := GetSession(db, sessionID)
+	if err != nil {
+		log.Printf("Error retrieving session: %v", err)
+		http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken := session.Token.AccessToken
 	userProfileBody, err := GetUserProfile(accessToken)
 	if err != nil {
 		log.Printf("Error getting user profile: %v", err)
@@ -211,16 +238,78 @@ func user(w http.ResponseWriter, r *http.Request) {
 	w.Write(userProfileBody)
 }
 
+// Endpoint handler for /logout
+func logout(w http.ResponseWriter, r *http.Request) {
+	// Add CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	// Handle preflight OPTIONS request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Only allow POST requests
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	fmt.Println("Running func: /logout")
+	sessionID := r.URL.Query().Get("session_id")
+	if sessionID == "" {
+		http.Error(w, "No session ID provided", http.StatusBadRequest)
+		return
+	}
+
+	// Delete the session
+	err := DeleteSession(db, sessionID)
+	if err != nil {
+		log.Printf("Error deleting session: %v", err)
+		http.Error(w, "Failed to logout", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message": "Logged out successfully"}`))
+}
+
+// Global database variable
+var db *bbolt.DB
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
+	// Initialize the database
+	db, err = InitDB()
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+
+	// Start a goroutine to clean up expired sessions periodically
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := CleanupExpiredSessions(db); err != nil {
+				log.Printf("Error cleaning up expired sessions: %v", err)
+			}
+		}
+	}()
+
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/data", data)
 	http.HandleFunc("/user", user)
+	http.HandleFunc("/logout", logout)
+	log.Println("Server starting on port 3024...")
 	http.ListenAndServe(":3024", nil)
 }
