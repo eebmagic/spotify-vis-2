@@ -7,15 +7,19 @@ import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Image } from 'primereact/image';
 
-import { getUserProfile, logoutUser } from './helpers/api.js';
+import { getUserProfile, logoutUser, getUserPlaylists } from './helpers/api.js';
 
 import Login from './components/Login.js';
 import UserProfile from './components/UserProfile.js';
+import PlaylistsModal from './components/PlaylistsModal.js';
 import githubMark from './images/github-mark.svg';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [playlists, setPlaylists] = useState(null);
+  const [playlistsModalVisible, setPlaylistsModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
   const toast = useRef(null);
 
   const handleLogout = async () => {
@@ -27,6 +31,21 @@ function App() {
       localStorage.removeItem('session_id');
       setIsAuthenticated(false);
       toast.current.show({ severity: 'info', summary: 'Logged out', detail: 'You have been logged out' });
+    }
+  };
+
+  const handleFetchPlaylists = async () => {
+    setLoading(true);
+    try {
+      const data = await getUserPlaylists();
+      setPlaylists(data);
+      setPlaylistsModalVisible(true);
+      toast.current.show({ severity: 'success', summary: 'Success', detail: 'Playlists fetched successfully' });
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      toast.current.show({ severity: 'error', summary: 'Error', detail: 'Failed to fetch playlists' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,10 +111,10 @@ function App() {
             style={{ backgroundColor: 'transparent', border: 'none' }}
           />
         </div>
-        
-        <div className="content-container" style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+
+        <div className="content-container" style={{
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           padding: '20px',
           marginTop: '50px'
@@ -104,9 +123,21 @@ function App() {
             <div className="user-section" style={{ marginBottom: '30px' }}>
               <h2>Welcome, {userProfile.display_name}!</h2>
               <UserProfile user={userProfile} />
+              <Button
+                label="View Your Playlists"
+                icon="pi pi-list"
+                onClick={handleFetchPlaylists}
+                loading={loading}
+                style={{ marginTop: '20px', backgroundColor: '#1DB954', border: 'none' }}
+              />
             </div>
           )}
-          
+
+          <PlaylistsModal
+            visible={playlistsModalVisible}
+            onHide={() => setPlaylistsModalVisible(false)}
+            playlists={playlists}
+          />
         </div>
       </header>
     </div>

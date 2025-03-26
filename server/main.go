@@ -138,9 +138,24 @@ func callback(w http.ResponseWriter, r *http.Request) {
 func data(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	fmt.Println("\n\nRunning func: /data")
+
+	// Add CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	// Handle preflight OPTIONS request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	sessionID := r.URL.Query().Get("session_id")
 	if sessionID == "" {
-		http.Error(w, "No session ID provided", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error": "No session ID provided"}`))
 		return
 	}
 
@@ -148,36 +163,23 @@ func data(w http.ResponseWriter, r *http.Request) {
 	session, err := GetSession(db, sessionID)
 	if err != nil {
 		log.Printf("Error retrieving session: %v", err)
-		http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"error": "Invalid or expired session"}`))
 		return
 	}
 
 	accessToken := session.Token.AccessToken
 	fmt.Println(fmt.Sprintf("Retrieved access token for session: %s", sessionID))
 
-	// Use the new GetUserProfile helper
-	userProfileBody, err := GetUserProfile(accessToken)
-	if err != nil {
-		log.Printf("Error getting user profile: %v", err)
-		http.Error(w, "Failed to fetch user data", http.StatusInternalServerError)
-		return
-	}
-
-	// Pull the user id from the user profile
-	var userProfile map[string]interface{}
-	if err := json.Unmarshal(userProfileBody, &userProfile); err != nil {
-		log.Printf("Error unmarshalling user profile: %v", err)
-		http.Error(w, "Failed to parse user profile", http.StatusInternalServerError)
-		return
-	}
-	fmt.Printf("\nFull user profile map: %+v\n", userProfile)
-
-	userID := userProfile["id"].(string)
-	fmt.Printf("\nUser ID: %s\n", userID)
-	body, err := GetUserPlaylists(accessToken, userID)
+	// Directly get the current user's playlists without needing the user profile
+	fmt.Println("Fetching current user's playlists")
+	body, err := GetCurrentUserPlaylists(accessToken)
 	if err != nil {
 		log.Printf("Error getting user playlists: %v", err)
-		http.Error(w, "Failed to fetch user playlists", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Failed to fetch user playlists"}`))
 		return
 	}
 

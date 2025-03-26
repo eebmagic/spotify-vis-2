@@ -12,25 +12,25 @@ const UserProfile = ({ user }) => {
     <Card className="user-profile-card" style={{ width: '300px', marginBottom: '20px' }}>
       <div className="flex flex-column align-items-center">
         {user.images && user.images.length > 0 ? (
-          <Avatar 
-            image={user.images[0].url} 
-            shape="circle" 
-            size="large" 
-            style={{ width: '80px', height: '80px', marginBottom: '10px' }} 
+          <Avatar
+            image={user.images[0].url}
+            shape="circle"
+            size="large"
+            style={{ width: '80px', height: '80px', marginBottom: '10px' }}
           />
         ) : (
-          <Avatar 
-            icon="pi pi-user" 
-            shape="circle" 
-            size="large" 
-            style={{ width: '80px', height: '80px', marginBottom: '10px' }} 
+          <Avatar
+            icon="pi pi-user"
+            shape="circle"
+            size="large"
+            style={{ width: '80px', height: '80px', marginBottom: '10px' }}
           />
         )}
         <h3 style={{ margin: '8px 0' }}>{user.display_name}</h3>
         <span className="text-sm text-color-secondary">{user.email}</span>
-        
+
         <Divider />
-        
+
         <div style={{ width: '100%' }}>
           <div className="flex justify-content-between">
             <span className="font-semibold">Followers:</span>
@@ -46,9 +46,9 @@ const UserProfile = ({ user }) => {
           </div>
           {user.external_urls?.spotify && (
             <div className="mt-3">
-              <a 
-                href={user.external_urls.spotify} 
-                target="_blank" 
+              <a
+                href={user.external_urls.spotify}
+                target="_blank"
                 rel="noopener noreferrer"
                 style={{ textDecoration: 'none', color: '#1DB954' }}
               >

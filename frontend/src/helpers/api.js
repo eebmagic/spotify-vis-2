@@ -43,3 +43,27 @@ export const logoutUser = async () => {
         throw error;
     }
 };
+
+export const getUserPlaylists = async () => {
+    try {
+        const sessionId = localStorage.getItem('session_id');
+        if (!sessionId) throw new Error('No session ID found');
+
+        const response = await fetch(`${API_BASE}/data?session_id=${sessionId}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP response error: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching user playlists:', error);
+        throw error;
+    }
+};
