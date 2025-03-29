@@ -27,9 +27,9 @@ type SpotifyTokenResponse struct {
 }
 
 // Endpoint handlers for root /
-func handler(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println("Running handler func")
-	// fmt.Fprintf(w, "Hello, world!")
+func root(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Running func: /")
+	fmt.Fprintf(w, "Hello, world!")
 }
 
 // Endpoint handler for /login
@@ -125,7 +125,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Redirect to the frontend with the session ID instead of the token
-		route := fmt.Sprintf("http://localhost:3000?session_id=%s", sessionID)
+		route := fmt.Sprintf("%s?session_id=%s", os.Getenv("FRONTEND_URL"), sessionID)
 		fmt.Println(fmt.Sprintf("Redirecting to: %s", route))
 		http.Redirect(w, r, route, http.StatusFound)
 		return
@@ -140,7 +140,7 @@ func data(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\n\nRunning func: /data")
 
 	// Add CORS headers
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_URL"))
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -183,13 +183,6 @@ func data(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Format the JSON response and log to console
-	// var prettyJSON bytes.Buffer
-	// if err := json.Indent(&prettyJSON, body, "", "    "); err != nil {
-	// 	log.Printf("Error formatting JSON: %v", err)
-	// }
-	// fmt.Printf("\nUser profile:\n%s\n", prettyJSON.String())
-
 	// Set content type header to application/json
 	w.Header().Set("Content-Type", "application/json")
 
@@ -202,7 +195,7 @@ func data(w http.ResponseWriter, r *http.Request) {
 
 func user(w http.ResponseWriter, r *http.Request) {
 	// Add CORS headers
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_URL"))
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -243,7 +236,7 @@ func user(w http.ResponseWriter, r *http.Request) {
 // Endpoint handler for /logout
 func logout(w http.ResponseWriter, r *http.Request) {
 	// Add CORS headers
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_URL"))
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -282,13 +275,47 @@ func logout(w http.ResponseWriter, r *http.Request) {
 // Global database variable
 var db *bbolt.DB
 
-func main() {
+// checkEnv loads the environment variables and verifies required variables exist
+func checkEnv() error {
+	// Try to load .env file from current directory
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Warning: Error loading .env file from current directory: %v", err)
+		// Try looking for .env in the server directory
+		err = godotenv.Load("server/.env")
+		if err != nil {
+			log.Printf("Warning: Error loading .env file from server/ directory: %v", err)
+		}
+	}
+
+	// Check for required environment variables
+	requiredEnvVars := []string{"SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "REDIRECT_URI", "FRONTEND_URL"}
+	missingVars := []string{}
+
+	for _, envVar := range requiredEnvVars {
+		if os.Getenv(envVar) == "" {
+			missingVars = append(missingVars, envVar)
+		}
+	}
+
+	if len(missingVars) > 0 {
+		return fmt.Errorf("missing required environment variables: %v", missingVars)
+	}
+
+	// Get global variables from environment
+	log.Printf("Using frontend URL: %s", os.Getenv("FRONTEND_URL"))
+
+	return nil
+}
+
+func main() {
+	// Check environment variables
+	if err := checkEnv(); err != nil {
+		log.Fatalf("Environment setup error: %v", err)
 	}
 
 	// Initialize the database
+	var err error
 	db, err = InitDB()
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
@@ -306,12 +333,12 @@ func main() {
 		}
 	}()
 
-	http.HandleFunc("/", handler)
+	http.HandleFunc("/", root)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/data", data)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/logout", logout)
-	log.Println("Server starting on port 3024...")
-	http.ListenAndServe(":3024", nil)
+	log.Println("Server starting on port 3026...")
+	http.ListenAndServe(":3026", nil)
 }
