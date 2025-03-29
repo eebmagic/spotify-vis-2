@@ -334,7 +334,7 @@ func playlistTracks(w http.ResponseWriter, r *http.Request) {
 
 	// Get the playlist tracks
 	fmt.Println(fmt.Sprintf("Fetching tracks for playlist: %s", playlistID))
-	body, err := GetPlaylistTracks(accessToken, playlistID)
+	body, err := GetPlaylistTracks(playlistID, accessToken)
 	if err != nil {
 		log.Printf("Error getting playlist tracks: %v", err)
 		w.Header().Set("Content-Type", "application/json")
