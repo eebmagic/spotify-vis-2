@@ -67,3 +67,28 @@ export const getUserPlaylists = async () => {
         throw error;
     }
 };
+
+export const getPlaylistTracks = async (playlistId) => {
+    try {
+        const sessionId = localStorage.getItem('session_id');
+        if (!sessionId) throw new Error('No session ID found');
+        if (!playlistId) throw new Error('No playlist ID provided');
+
+        const response = await fetch(`${API_BASE}/playlist/${playlistId}?session_id=${sessionId}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP response error: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching playlist tracks:', error);
+        throw error;
+    }
+};
