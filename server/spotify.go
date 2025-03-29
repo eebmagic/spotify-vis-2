@@ -113,6 +113,39 @@ func GetCurrentUserPlaylists(accessToken string) ([]byte, error) {
 	return body, nil
 }
 
+// GetPlaylistTracks fetches the tracks for a specific playlist
+func GetPlaylistTracks(accessToken string, playlistId string) ([]byte, error) {
+	// Create request to Spotify API
+	endpoint := fmt.Sprintf("%s/playlists/%s/tracks", SPOTIFY_API_BASE, playlistId)
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Add authorization header
+	req.Header.Add("Authorization", "Bearer "+accessToken)
+
+	// Make the request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request to Spotify API: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Spotify API returned non-200 status: %d", resp.StatusCode)
+	}
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %v", err)
+	}
+
+	return body, nil
+}
+
 // RefreshAccessToken refreshes an access token using a refresh token
 func RefreshAccessToken(refreshToken string) (SpotifyTokenResponse, error) {
 	tokenUrl := "https://accounts.spotify.com/api/token"

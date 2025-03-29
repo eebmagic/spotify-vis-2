@@ -272,6 +272,87 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"message": "Logged out successfully"}`))
 }
 
+// Endpoint handler for /playlist/{playlistId}
+func playlistTracks(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	fmt.Println("\n\nRunning func: /playlist/{playlistId}")
+
+	// Add CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_URL"))
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	// Handle preflight OPTIONS request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Extract the playlist ID from the URL path
+	// URL format: /playlist/{playlistId}
+	urlPath := r.URL.Path
+	pathParts := strings.Split(urlPath, "/")
+
+	// Check if path has enough parts
+	if len(pathParts) < 3 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error": "Invalid URL format, expected /playlist/{playlistId}"}`))
+		return
+	}
+
+	playlistID := pathParts[2]
+	sessionID := r.URL.Query().Get("session_id")
+
+	if sessionID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error": "No session ID provided"}`))
+		return
+	}
+
+	if playlistID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error": "No playlist ID provided in URL path"}`))
+		return
+	}
+
+	// Get the session from bbolt
+	session, err := GetSession(db, sessionID)
+	if err != nil {
+		log.Printf("Error retrieving session: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"error": "Invalid or expired session"}`))
+		return
+	}
+
+	accessToken := session.Token.AccessToken
+	fmt.Println(fmt.Sprintf("Retrieved access token for session: %s", sessionID))
+
+	// Get the playlist tracks
+	fmt.Println(fmt.Sprintf("Fetching tracks for playlist: %s", playlistID))
+	body, err := GetPlaylistTracks(accessToken, playlistID)
+	if err != nil {
+		log.Printf("Error getting playlist tracks: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Failed to fetch playlist tracks"}`))
+		return
+	}
+
+	// Set content type header to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON response directly to the ResponseWriter
+	w.Write(body)
+
+	elapsed := time.Since(start)
+	fmt.Printf("Playlist tracks function took %s\n", elapsed)
+}
+
 // Global database variable
 var db *bbolt.DB
 
@@ -339,6 +420,7 @@ func main() {
 	http.HandleFunc("/data", data)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/playlist/", playlistTracks)
 	log.Println("Server starting on port 3026...")
 	http.ListenAndServe(":3026", nil)
 }
