@@ -1,9 +1,13 @@
 import React from 'react';
 import { Button } from 'primereact/button';
 
+// Import API_BASE from the same location as other API calls
+import { API_BASE } from '../helpers/api';
+
 const Login = () => {
   const handleLogin = () => {
-    window.location.href = 'http://localhost:3024/login';
+    // Construct login URL from API_BASE
+    window.location.href = `${API_BASE}/login`;
   };
 
   return (

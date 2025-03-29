@@ -1,5 +1,5 @@
-// const API_BASE = 'https://links.ebolton.site'
-const API_BASE = 'http://localhost:3024'
+// Use environment variable with fallback value for local development
+export const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:3026'
 
 export const getUserProfile = async () => {
     try {
