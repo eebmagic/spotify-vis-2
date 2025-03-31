@@ -15,6 +15,27 @@ const (
 	SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 )
 
+// Image represents a Spotify album image with dimensions
+type SpotifyImage struct {
+	URL    string `json:"url"`
+	Height int    `json:"height"`
+	Width  int    `json:"width"`
+}
+// TrackItem represents a track item in a Spotify playlist
+type TrackItem struct {
+	Track struct {
+		ID string `json:"id"`
+		Name string `json:"name"`
+		Album struct {
+			Images []SpotifyImage `json:"images"`
+		} `json:"album"`
+	} `json:"track"`
+}
+type ProcessedItem struct {
+	Track json.RawMessage `json:"track"`
+	AvgColor Color `json:"avgColor"`
+}
+
 // GetUserProfile fetches the current user's Spotify profile
 func GetUserProfile(accessToken string) ([]byte, error) {
 	// Create request to Spotify API
@@ -159,13 +180,52 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 
 	fmt.Printf("Total tracks collected: %d\n", len(allTracks.Items))
 
+	// Parse all tracks into TrackItem structs
+	trackItems := []TrackItem{}
+	for _, item := range allTracks.Items {
+		var trackItem TrackItem
+		if err := json.Unmarshal(item, &trackItem); err != nil {
+			return nil, fmt.Errorf("error parsing track item: %v", err)
+		}
+		trackItems = append(trackItems, trackItem)
+	}
+
+	// Process the images
+	processedItems := HandoffItemsForImageProcessing(allTracks.Items)
+
 	// Marshal the combined tracks back to JSON
-	result, err := json.Marshal(allTracks)
+	result, err := json.Marshal(processedItems)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling combined tracks: %v", err)
+		return nil, fmt.Errorf("error marshaling processed track list: %v", err)
 	}
 
 	return result, nil
+}
+
+func HandoffItemsForImageProcessing(items []json.RawMessage) []ProcessedItem {
+	processedItems := []ProcessedItem{}
+	for _, item := range items {
+		var trackItem TrackItem
+		if err := json.Unmarshal(item, &trackItem); err != nil {
+			fmt.Printf("error parsing track item: %v", err)
+		}
+		smallestImage := FindSmallestImage(&trackItem.Track.Album.Images)
+		avgColor := ProcessImage(smallestImage)
+		fmt.Printf("Processed image - URL: %s, Avg Color: %+v\n", smallestImage.URL, avgColor)
+
+		// Pull out only the track object from the item
+		// TODO: Come back later and thin this down to only the fields we need
+		var trackJson json.RawMessage
+		if err := json.Unmarshal(item, &struct {
+			Track *json.RawMessage `json:"track"`
+		}{&trackJson}); err != nil {
+			fmt.Printf("error extracting track from item: %v", err)
+			trackJson = item // Fallback to using full item if extraction fails
+		}
+
+		processedItems = append(processedItems, ProcessedItem{Track: trackJson, AvgColor: avgColor})
+	}
+	return processedItems
 }
 
 // RefreshAccessToken refreshes an access token using a refresh token
