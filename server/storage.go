@@ -181,6 +181,7 @@ func DeleteSession(db *bbolt.DB, sessionID string) error {
 
 // CleanupExpiredSessions removes all expired sessions from the database
 func CleanupExpiredSessions(db *bbolt.DB) error {
+	fmt.Println("Cleaning up expired sessions")
 	var expiredSessionIDs []string
 
 	// Find all expired sessions
