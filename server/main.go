@@ -26,12 +26,6 @@ type SpotifyTokenResponse struct {
 	Scope          string `json:"scope"`
 }
 
-// Endpoint handlers for root /
-func root(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Running func: /")
-	fmt.Fprintf(w, "Hello, world!")
-}
-
 // Endpoint handler for /login
 func login(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Running func: /login")
@@ -414,13 +408,47 @@ func main() {
 		}
 	}()
 
-	http.HandleFunc("/", root)
+	// Create file server for the entire build directory
+	fs := http.FileServer(http.Dir("../frontend/build"))
+
+	// API routes first
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/data", data)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/playlist/", playlistTracks)
+
+	// Serve the frontend app
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("Request for path: %s\n", r.URL.Path)
+
+		// Check if the file exists in the build directory
+		path := "../frontend/build" + r.URL.Path
+		_, err := os.Stat(path)
+
+		// If the file exists, serve it directly
+		if err == nil {
+			fmt.Printf("Serving static file: %s\n", path)
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		// For known static files that should be there, return 404 if not found
+		if strings.HasPrefix(r.URL.Path, "/static/") ||
+		   strings.HasSuffix(r.URL.Path, ".ico") ||
+		   strings.HasSuffix(r.URL.Path, ".json") {
+			fmt.Printf("File not found: %s\n", path)
+			http.NotFound(w, r)
+			return
+		}
+
+		// For all other requests, serve the React app's index.html (SPA support)
+		fmt.Printf("Serving SPA for path: %s\n", r.URL.Path)
+		http.ServeFile(w, r, "../frontend/build/index.html")
+	})
+
 	log.Println("Server starting on port 3026...")
+	log.Println("Serving frontend from ../frontend/build")
 	http.ListenAndServe(":3026", nil)
 }
