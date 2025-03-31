@@ -7,7 +7,8 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 const TracksModal = ({ visible, onHide, tracks, playlistName, loading }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageDialogVisible, setImageDialogVisible] = useState(false);
-  const [color, setColor] = useState(null);
+  const [avgColor, setAvgColor] = useState(null);
+  const [commonColor, setCommonColor] = useState(null);
 
   if (loading) {
     return (
@@ -73,7 +74,8 @@ const TracksModal = ({ visible, onHide, tracks, playlistName, loading }) => {
                             onClick={() => {
                               setImageDialogVisible(true);
                               setSelectedImage(track.album.images[0].url);
-                              setColor(item.avgColor);
+                              setAvgColor(item.avgColor);
+                              setCommonColor(item.commonColor);
                             }}
                           />
                           <Dialog
@@ -83,20 +85,35 @@ const TracksModal = ({ visible, onHide, tracks, playlistName, loading }) => {
                             style={{ width: '90vw', height: '90vh' }}
                             dismissableMask
                           >
-                            <div className="flex flex-column justify-content-center align-items-center" style={{height: '100%', position: 'relative', gap: '20px'}}>
-                              <div style={{ bottom: '20px', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className="flex flex-column justify-content-center align-items-center" style={{height: '100%', position: 'relative', gap: '10px'}}>
+                              <div style={{ borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <span
                                   style={{
                                     width: '30px',
                                     height: '30px',
-                                    backgroundColor: `rgb(${color?.R}, ${color?.G}, ${color?.B})`,
+                                    backgroundColor: `rgb(${avgColor?.R}, ${avgColor?.G}, ${avgColor?.B})`,
                                     display: 'inline-block',
                                     border: '1px solid #fff',
                                     borderRadius: '4px'
                                   }}
                                 />
                                 <p style={{margin: '0', color: 'black'}}>
-                                  Avg RGB: ({color?.R}, {color?.G}, {color?.B})
+                                  Avg RGB: ({avgColor?.R}, {avgColor?.G}, {avgColor?.B})
+                                </p>
+                              </div>
+                              <div style={{borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px'}}>
+                                <span
+                                  style={{
+                                    width: '30px',
+                                    height: '30px',
+                                    backgroundColor: `rgb(${commonColor?.R}, ${commonColor?.G}, ${commonColor?.B})`,
+                                    display: 'inline-block',
+                                    border: '1px solid #fff',
+                                    borderRadius: '4px'
+                                  }}
+                                />
+                                <p style={{margin: '0', color: 'black'}}>
+                                  Common RGB: ({commonColor?.R}, {commonColor?.G}, {commonColor?.B})
                                 </p>
                               </div>
                               <div style={{height: '95%'}}>
@@ -137,6 +154,19 @@ const TracksModal = ({ visible, onHide, tracks, playlistName, loading }) => {
                             }}
                           />
                           Average Color: ({item.avgColor.R}, {item.avgColor.G}, {item.avgColor.B})
+                        </p>
+                        <p style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0' }}>
+                          <span
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              backgroundColor: `rgb(${item.commonColor.R}, ${item.commonColor.G}, ${item.commonColor.B})`,
+                              display: 'inline-block',
+                              border: '1px solid #ddd',
+                              borderRadius: '4px'
+                            }}
+                          />
+                          Common Color: ({item.commonColor.R}, {item.commonColor.G}, {item.commonColor.B})
                         </p>
                       </div>
                     </div>

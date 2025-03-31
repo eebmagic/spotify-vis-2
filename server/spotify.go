@@ -34,6 +34,7 @@ type TrackItem struct {
 type ProcessedItem struct {
 	Track json.RawMessage `json:"track"`
 	AvgColor Color `json:"avgColor"`
+	CommonColor Color `json:"commonColor"`
 }
 
 // GetUserProfile fetches the current user's Spotify profile
@@ -210,8 +211,8 @@ func HandoffItemsForImageProcessing(items []json.RawMessage) []ProcessedItem {
 			fmt.Printf("error parsing track item: %v", err)
 		}
 		smallestImage := FindSmallestImage(&trackItem.Track.Album.Images)
-		avgColor := ProcessImage(smallestImage)
-		fmt.Printf("Processed image - URL: %s, Avg Color: %+v\n", smallestImage.URL, avgColor)
+		avgColor, commonColor := ProcessImage(smallestImage)
+		fmt.Printf("Processed image - URL: %s, Avg Color: %+v, Common Color: %+v\n", smallestImage.URL, avgColor, commonColor)
 
 		// Pull out only the track object from the item
 		// TODO: Come back later and thin this down to only the fields we need
@@ -223,7 +224,7 @@ func HandoffItemsForImageProcessing(items []json.RawMessage) []ProcessedItem {
 			trackJson = item // Fallback to using full item if extraction fails
 		}
 
-		processedItems = append(processedItems, ProcessedItem{Track: trackJson, AvgColor: avgColor})
+		processedItems = append(processedItems, ProcessedItem{Track: trackJson, AvgColor: avgColor, CommonColor: commonColor})
 	}
 	return processedItems
 }

@@ -19,9 +19,9 @@ type Color struct {
 
 // ProcessImage safely processes an image URL and returns its dimensions
 // Returns nil if there's any error processing the image
-func ProcessImage(spotifyImage *SpotifyImage) Color {
+func ProcessImage(spotifyImage *SpotifyImage) (Color, Color) {
 	if spotifyImage.URL == "" {
-		return Color{R: 0, G: 0, B: 0}
+		return Color{R: 0, G: 0, B: 0}, Color{R: 0, G: 0, B: 0}
 	}
 
 	fmt.Println(fmt.Sprintf("Processing image: %s", spotifyImage.URL))
@@ -30,33 +30,35 @@ func ProcessImage(spotifyImage *SpotifyImage) Color {
 	resp, err := http.Get(spotifyImage.URL)
 	if err != nil {
 		log.Printf("Error fetching image %s: %v", spotifyImage.URL, err)
-		return Color{R: 0, G: 0, B: 0}
+		return Color{R: 0, G: 0, B: 0}, Color{R: 0, G: 0, B: 0}
 	}
 	defer resp.Body.Close()
 
 	// Check if the response was successful
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Non-200 status code fetching image %s: %d", spotifyImage.URL, resp.StatusCode)
-		return Color{R: 0, G: 0, B: 0}
+		return Color{R: 0, G: 0, B: 0}, Color{R: 0, G: 0, B: 0}
 	}
 
 	// Try to decode the image
 	img, _, err := image.Decode(resp.Body)
 	if err != nil {
 		log.Printf("Error decoding image %s: %v", spotifyImage.URL, err)
-		return Color{R: 0, G: 0, B: 0}
+		return Color{R: 0, G: 0, B: 0}, Color{R: 0, G: 0, B: 0}
 	}
 
 	// Compute the average color of the image
-	avgColor := ComputeAverageColor(img)
+	avgColor, commonColor := ComputeAverageColor(img)
 
-	return avgColor
+	return avgColor, commonColor
 }
 
-func ComputeAverageColor(img image.Image) Color {
+func ComputeAverageColor(img image.Image) (Color, Color) {
 	bounds := img.Bounds()
 	totalR, totalG, totalB := 0, 0, 0
 	count := 0
+
+	colorCounts := make(map[Color]int)
 
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -65,6 +67,8 @@ func ComputeAverageColor(img image.Image) Color {
 			totalG += int(g>>8)
 			totalB += int(b>>8)
 			count++
+
+			colorCounts[Color{R: int(r>>8>>3<<3), G: int(g>>8>>3<<3), B: int(b>>8>>3<<3)}]++
 		}
 	}
 
@@ -74,7 +78,17 @@ func ComputeAverageColor(img image.Image) Color {
 
 	avgColor := Color{R: avgR, G: avgG, B: avgB}
 
-	return avgColor
+	commonColor := Color{R: 0, G: 0, B: 0}
+	commonColorCount := 0
+
+	for color, count := range colorCounts {
+		if count > commonColorCount {
+			commonColor = color
+			commonColorCount = count
+		}
+	}
+
+	return avgColor, commonColor
 }
 
 // FindSmallestImage takes a slice of Spotify image objects and returns the smallest one
