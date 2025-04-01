@@ -17,8 +17,7 @@ type Color struct {
 	B int
 }
 
-// ProcessImage safely processes an image URL and returns its dimensions
-// Returns nil if there's any error processing the image
+// Download the image and then pass along to compute the main color
 func ProcessImage(spotifyImage *SpotifyImage) (Color, Color) {
 	if spotifyImage.URL == "" {
 		return Color{R: 0, G: 0, B: 0}, Color{R: 0, G: 0, B: 0}
@@ -57,6 +56,7 @@ func ComputeAverageColor(img image.Image) (Color, Color) {
 	bounds := img.Bounds()
 	totalR, totalG, totalB := 0, 0, 0
 	count := 0
+	rbit := 4
 
 	colorCounts := make(map[Color]int)
 
@@ -68,7 +68,7 @@ func ComputeAverageColor(img image.Image) (Color, Color) {
 			totalB += int(b>>8)
 			count++
 
-			colorCounts[Color{R: int(r>>8>>3<<3), G: int(g>>8>>3<<3), B: int(b>>8>>3<<3)}]++
+			colorCounts[Color{R: int(r>>8>>rbit<<rbit), G: int(g>>8>>rbit<<rbit), B: int(b>>8>>rbit<<rbit)}]++
 		}
 	}
 
@@ -80,15 +80,50 @@ func ComputeAverageColor(img image.Image) (Color, Color) {
 
 	commonColor := Color{R: 0, G: 0, B: 0}
 	commonColorCount := 0
+	commonGrayscaleColor := Color{R: 0, G: 0, B: 0}
+	commonGrayscaleColorCount := 0
 
 	for color, count := range colorCounts {
-		if count > commonColorCount {
+		if count > commonColorCount && !isGrayscale(color) {
 			commonColor = color
 			commonColorCount = count
 		}
+
+		if count > commonGrayscaleColorCount && isGrayscale(color) {
+			commonGrayscaleColor = color
+			commonGrayscaleColorCount = count
+		}
 	}
 
-	return avgColor, commonColor
+	// If the non-gray color is over 1/5th of the total, use it as the common color	
+	fmt.Println(fmt.Sprintf("Using grayscale color (count: %d): %v", commonGrayscaleColorCount, commonGrayscaleColor))
+	fmt.Println(fmt.Sprintf("Using non-grayscale color (count: %d): %v", commonColorCount, commonColor))
+	fmt.Println(fmt.Sprintf("Using non-grayscale color?", commonColorCount > 20))
+	fmt.Println(fmt.Sprintf("Count: %d", count))
+
+	if commonColorCount > 20 {
+		return avgColor, commonColor
+	}
+
+	return avgColor, commonGrayscaleColor
+}
+
+func absDiff(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
+
+func isGrayscale(color Color) bool {
+	thresh := 40
+	rg := absDiff(color.R, color.G)
+	gb := absDiff(color.G, color.B)
+	br := absDiff(color.B, color.R)
+
+	value := (rg < thresh && gb < thresh && br < thresh)
+
+	return value
 }
 
 // FindSmallestImage takes a slice of Spotify image objects and returns the smallest one
