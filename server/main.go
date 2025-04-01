@@ -268,7 +268,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 // Endpoint handler for /playlist/{playlistId}
 func playlistTracks(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
 	fmt.Println("\n\nRunning func: /playlist/{playlistId}")
 
 	// Add CORS headers
@@ -342,9 +341,6 @@ func playlistTracks(w http.ResponseWriter, r *http.Request) {
 
 	// Write the JSON response directly to the ResponseWriter
 	w.Write(body)
-
-	elapsed := time.Since(start)
-	fmt.Printf("Playlist tracks function took %s\n", elapsed)
 }
 
 // Global database variable

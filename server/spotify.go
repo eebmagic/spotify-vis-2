@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -23,16 +25,20 @@ type SpotifyImage struct {
 }
 // TrackItem represents a track item in a Spotify playlist
 type TrackItem struct {
-	Track struct {
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Album struct {
 		ID string `json:"id"`
 		Name string `json:"name"`
-		Album struct {
-			Images []SpotifyImage `json:"images"`
-		} `json:"album"`
-	} `json:"track"`
+		URL string `json:"href"`
+		Images []SpotifyImage `json:"images"`
+	} `json:"album"`
+}
+type jsonTrackItem struct {
+	Track TrackItem `json:"track"`
 }
 type ProcessedItem struct {
-	Track json.RawMessage `json:"track"`
+	Track TrackItem `json:"track"`
 	AvgColor Color `json:"avgColor"`
 	CommonColor Color `json:"commonColor"`
 }
@@ -111,6 +117,8 @@ type PaginatedResponse struct {
 
 // GetPlaylistTracks fetches all tracks for a specific playlist, handling pagination
 func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
+	start := time.Now()
+
 	// Define our track collection that will hold all tracks
 	type CombinedTracksResponse struct {
 		Items []json.RawMessage `json:"items"`
@@ -129,6 +137,7 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating request: %v", err)
 		}
+		fmt.Printf("  Time to create request: %s\n", time.Since(start))
 
 		// Add authorization header
 		req.Header.Add("Authorization", "Bearer "+accessToken)
@@ -138,6 +147,7 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error making request to Spotify API: %v", err)
 		}
+		fmt.Printf("  Time to receive request: %s\n", time.Since(start))
 
 		// Check response status
 		if resp.StatusCode != http.StatusOK {
@@ -180,19 +190,27 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 	}
 
 	fmt.Printf("Total tracks collected: %d\n", len(allTracks.Items))
+	fmt.Printf("  Time to collect tracks: %s\n", time.Since(start))
 
 	// Parse all tracks into TrackItem structs
 	trackItems := []TrackItem{}
+	albumSet := make(map[string]bool)
 	for _, item := range allTracks.Items {
-		var trackItem TrackItem
+		var trackItem jsonTrackItem
 		if err := json.Unmarshal(item, &trackItem); err != nil {
 			return nil, fmt.Errorf("error parsing track item: %v", err)
 		}
-		trackItems = append(trackItems, trackItem)
+		if _, ok := albumSet[trackItem.Track.Album.ID]; !ok {
+			trackItems = append(trackItems, trackItem.Track)
+			albumSet[trackItem.Track.Album.ID] = true
+		}
 	}
 
 	// Process the images
-	processedItems := HandoffItemsForImageProcessing(allTracks.Items)
+	fmt.Printf("Starting image processing: %s\n", time.Now())
+	processedItems := HandoffItemsForImageProcessing(trackItems)
+	fmt.Printf("Processed %d tracks\n", len(processedItems))
+	fmt.Printf("  Time to process images: %s\n", time.Since(start))
 
 	// Marshal the combined tracks back to JSON
 	result, err := json.Marshal(processedItems)
@@ -203,29 +221,24 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 	return result, nil
 }
 
-func HandoffItemsForImageProcessing(items []json.RawMessage) []ProcessedItem {
-	processedItems := []ProcessedItem{}
-	for _, item := range items {
-		var trackItem TrackItem
-		if err := json.Unmarshal(item, &trackItem); err != nil {
-			fmt.Printf("error parsing track item: %v", err)
-		}
-		smallestImage := FindSmallestImage(&trackItem.Track.Album.Images)
-		avgColor, commonColor := ProcessImage(smallestImage)
-		fmt.Printf("Processed image - URL: %s, Avg Color: %+v, Common Color: %+v\n", smallestImage.URL, avgColor, commonColor)
+func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
+	processedItems := make([]ProcessedItem, len(items))
+	var wg sync.WaitGroup
+	wg.Add(len(items))
 
-		// Pull out only the track object from the item
-		// TODO: Come back later and thin this down to only the fields we need
-		var trackJson json.RawMessage
-		if err := json.Unmarshal(item, &struct {
-			Track *json.RawMessage `json:"track"`
-		}{&trackJson}); err != nil {
-			fmt.Printf("error extracting track from item: %v", err)
-			trackJson = item // Fallback to using full item if extraction fails
-		}
+	for i, item := range items {
+		go func(i int, item TrackItem) {
+			defer wg.Done()
+			smallestImage := FindSmallestImage(&item.Album.Images)
+			avgColor, commonColor := ProcessImage(smallestImage)
 
-		processedItems = append(processedItems, ProcessedItem{Track: trackJson, AvgColor: avgColor, CommonColor: commonColor})
+			processedItems[i] = ProcessedItem{Track: item, AvgColor: avgColor, CommonColor: commonColor}
+		}(i, item)
 	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+
 	return processedItems
 }
 

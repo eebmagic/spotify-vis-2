@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -22,8 +21,6 @@ func ProcessImage(spotifyImage *SpotifyImage) (Color, Color) {
 	if spotifyImage.URL == "" {
 		return Color{R: 0, G: 0, B: 0}, Color{R: 0, G: 0, B: 0}
 	}
-
-	fmt.Println(fmt.Sprintf("Processing image: %s", spotifyImage.URL))
 
 	// Make an HTTP request to get the image
 	resp, err := http.Get(spotifyImage.URL)
@@ -94,12 +91,6 @@ func ComputeAverageColor(img image.Image) (Color, Color) {
 			commonGrayscaleColorCount = count
 		}
 	}
-
-	// If the non-gray color is over 1/5th of the total, use it as the common color	
-	fmt.Println(fmt.Sprintf("Using grayscale color (count: %d): %v", commonGrayscaleColorCount, commonGrayscaleColor))
-	fmt.Println(fmt.Sprintf("Using non-grayscale color (count: %d): %v", commonColorCount, commonColor))
-	fmt.Println(fmt.Sprintf("Using non-grayscale color?", commonColorCount > 20))
-	fmt.Println(fmt.Sprintf("Count: %d", count))
 
 	if commonColorCount > 20 {
 		return avgColor, commonColor
