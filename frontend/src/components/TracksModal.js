@@ -70,7 +70,7 @@ const TracksModal = ({ visible, onHide, tracks, playlistName, loading }) => {
                           <img
                             src={track.album.images[0].url}
                             alt={track.album.name}
-                            style={{ width: '50px', height: '50px', borderRadius: '4px', cursor: 'pointer' }}
+                            style={{ width: '80px', height: '80px', borderRadius: '4px', cursor: 'pointer' }}
                             onClick={() => {
                               setImageDialogVisible(true);
                               setSelectedImage(track.album.images[0].url);
