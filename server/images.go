@@ -53,7 +53,7 @@ func ComputeAverageColor(img image.Image) (Color, Color) {
 	bounds := img.Bounds()
 	totalR, totalG, totalB := 0, 0, 0
 	count := 0
-	rbit := 4
+	rbit := 3
 
 	colorCounts := make(map[Color]int)
 
