@@ -98,6 +98,7 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
                       </div>
                       <p>Tracks: {playlist.tracks?.total || 0}</p>
                       <p>Owner: {playlist.owner?.display_name || 'Unknown'}</p>
+                      <p>{index + 1}</p>
                       {playlist.description && <p>Description: {playlist.description}</p>}
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         <Button
