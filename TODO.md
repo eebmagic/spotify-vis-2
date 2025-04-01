@@ -1,8 +1,12 @@
 - [x] Go server image processing
-- [ ] Async image processing over track items
-- [ ] Compare with Common vs Average color
+- [x] Async image processing over track items
+- [x] Compare with Common vs Average color
 - [ ] Paginate through user playlists
+    - [ ] Fuzzy search for playlist results
+        - Not sure how to handle users with TONS of playlists
 - [ ] Text input box for non-user playlist
-- [ ] Thin down tracklist response to minimize payload size
-- [ ] Update server `/` to return a frontend build
+- [x] Thin down tracklist response to minimize payload size
+- [x] Update server `/` to return a frontend build
+- [ ] Embed frontend into compiled binary?
+    - [Related ChatGPT thread](https://chatgpt.com/c/67eb583e-2fb0-800d-8a0f-90cf99b19e2d)
 
