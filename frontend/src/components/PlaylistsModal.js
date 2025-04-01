@@ -6,12 +6,14 @@ import { ScrollPanel } from 'primereact/scrollpanel';
 import { Toast } from 'primereact/toast';
 import { getPlaylistTracks } from '../helpers/api';
 import TracksModal from './TracksModal';
+import TracksColorWheel from './TracksColorWheel';
 
 const PlaylistsModal = ({ visible, onHide, playlists }) => {
   const [loading, setLoading] = useState({});
   const [selectedTracks, setSelectedTracks] = useState(null);
   const [selectedPlaylistName, setSelectedPlaylistName] = useState('');
   const [tracksModalVisible, setTracksModalVisible] = useState(false);
+  const [colorWheelVisible, setColorWheelVisible] = useState(false);
   const toastRef = useRef(null);
 
   if (!playlists) return null;
@@ -97,7 +99,7 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
                       <p>Tracks: {playlist.tracks?.total || 0}</p>
                       <p>Owner: {playlist.owner?.display_name || 'Unknown'}</p>
                       {playlist.description && <p>Description: {playlist.description}</p>}
-                      <div style={{ display: 'flex', gap: '10px' }}>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         <Button
                           label="View Playlist JSON"
                           icon="pi pi-code"
@@ -111,6 +113,18 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
                           loading={loading[playlist.id]}
                           onClick={() => handleGetPlaylistData(playlist.id, playlist.name)}
                           className="p-button-outlined p-button-success"
+                          style={{ padding: '0.5rem' }}
+                        />
+                        <Button
+                          label="Color Wheel View"
+                          icon="pi pi-chart-pie"
+                          loading={loading[playlist.id]}
+                          onClick={() => {
+                            handleGetPlaylistData(playlist.id, playlist.name);
+                            setColorWheelVisible(true);
+                            setTracksModalVisible(false);
+                          }}
+                          className="p-button-outlined p-button-info"
                           style={{ padding: '0.5rem' }}
                         />
                       </div>
@@ -140,6 +154,20 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
         tracks={selectedTracks}
         playlistName={selectedPlaylistName}
         loading={selectedTracks === null && tracksModalVisible}
+      />
+
+      <TracksColorWheel
+        visible={colorWheelVisible}
+        onHide={() => {
+          setColorWheelVisible(false);
+          // Reset tracks data after modal closes
+          setTimeout(() => {
+            setSelectedTracks(null);
+          }, 300);
+        }}
+        tracks={selectedTracks}
+        playlistName={selectedPlaylistName}
+        loading={selectedTracks === null && colorWheelVisible}
       />
     </>
   );
