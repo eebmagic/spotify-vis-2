@@ -229,10 +229,21 @@ func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
 	for i, item := range items {
 		go func(i int, item TrackItem) {
 			defer wg.Done()
+
+			// Check cache
+			avgColor, commonColor, err := GetCache(item.Album.ID)
+			if err == nil {
+				processedItems[i] = ProcessedItem{Track: item, AvgColor: avgColor, CommonColor: commonColor}
+				return
+			}
+
 			smallestImage := FindSmallestImage(&item.Album.Images)
-			avgColor, commonColor := ProcessImage(smallestImage)
+			avgColor, commonColor = ProcessImage(smallestImage)
 
 			processedItems[i] = ProcessedItem{Track: item, AvgColor: avgColor, CommonColor: commonColor}
+
+			// Update cache
+			SetCache(item.Album.ID, avgColor, commonColor)
 		}(i, item)
 	}
 
