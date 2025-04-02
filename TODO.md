@@ -9,4 +9,5 @@
 - [x] Update server `/` to return a frontend build
 - [ ] Embed frontend into compiled binary?
     - [Related ChatGPT thread](https://chatgpt.com/c/67eb583e-2fb0-800d-8a0f-90cf99b19e2d)
-
+- [x] Cache album colors in redis
+- [ ] Use a redis pipeline to set expiration for updated cache keys

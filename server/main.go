@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/joho/godotenv"
 	"go.etcd.io/bbolt"
 )
@@ -344,7 +346,28 @@ func playlistTracks(w http.ResponseWriter, r *http.Request) {
 }
 
 // Global database variable
-var db *bbolt.DB
+var (
+	db  *bbolt.DB
+	rdb *redis.Client
+	ctx = context.Background()  // Global context
+)
+
+func init() {
+	// Check environment variables
+	if err := checkEnv(); err != nil {
+		log.Fatalf("Environment setup error: %v", err)
+	}
+
+	// Initialize Redis client
+	opt, _ := redis.ParseURL(os.Getenv("REDIS_URI"))
+	rdb = redis.NewClient(opt)
+
+	// Test Redis connection
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	fmt.Println("Connected to Redis!")
+}
 
 // checkEnv loads the environment variables and verifies required variables exist
 func checkEnv() error {
@@ -360,7 +383,7 @@ func checkEnv() error {
 	}
 
 	// Check for required environment variables
-	requiredEnvVars := []string{"SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "REDIRECT_URI", "FRONTEND_URL"}
+	requiredEnvVars := []string{"SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "REDIRECT_URI", "FRONTEND_URL", "REDIS_URI"}
 	missingVars := []string{}
 
 	for _, envVar := range requiredEnvVars {
@@ -380,11 +403,6 @@ func checkEnv() error {
 }
 
 func main() {
-	// Check environment variables
-	if err := checkEnv(); err != nil {
-		log.Fatalf("Environment setup error: %v", err)
-	}
-
 	// Initialize the database
 	var err error
 	db, err = InitDB()
@@ -392,6 +410,7 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
+	defer rdb.Close()
 
 	// Start a goroutine to clean up expired sessions periodically
 	go func() {
