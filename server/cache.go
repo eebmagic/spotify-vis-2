@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -13,43 +12,64 @@ type CacheEntry struct {
 	CommonColor Color `json:"common_color"`
 }
 
-func GetCache(key string) (Color, Color, error) {
+func GetCache(keys []string) ([]*CacheEntry, error) {
 	// Try to get from Redis
-	val, err := rdb.Get(ctx, key).Result()
+	vals, err := rdb.MGet(ctx, keys...).Result()
 	if err == redis.Nil {
-		return Color{}, Color{}, fmt.Errorf("key not found")
+		return make([]*CacheEntry, len(keys)), nil
 	} else if err != nil {
-		return Color{}, Color{}, err
+		return nil, err
 	}
 
-	// Unmarshal the cached entry
-	var entry CacheEntry
-	if err := json.Unmarshal([]byte(val), &entry); err != nil {
-		return Color{}, Color{}, err
-	}
+	// Initialize slice with nil pointers
+	entries := make([]*CacheEntry, len(keys))
+	hitCount := 0
 
-	return entry.AvgColor, entry.CommonColor, nil
+	// Unmarshal the cached entries
+	for i, v := range vals {
+		if v == nil {
+			continue
+		}
+		// Type assert the interface{} to string before converting to []byte
+		strVal, ok := v.(string)
+		if !ok {
+			continue
+		}
+
+		var entry CacheEntry
+		if err := json.Unmarshal([]byte(strVal), &entry); err != nil {
+			continue
+		}
+		entries[i] = &entry
+		hitCount++
+	}
+	fmt.Println("hit count: ", hitCount)
+
+	return entries, nil
 }
 
-func SetCache(key string, avgColor Color, commonColor Color) error {
-	// Create cache entry
-	entry := CacheEntry{
-		AvgColor:    avgColor,
-		CommonColor: commonColor,
+func SetCache(cacheUpdates map[string]CacheEntry) error {
+	if len(cacheUpdates) == 0 {
+		return nil
 	}
 
-	// Marshal the entry
-	jsonData, err := json.Marshal(entry)
-	if err != nil {
-		return err
+	// Create cache entry
+	pairs := make([]interface{}, 0, len(cacheUpdates)*2)
+	for key, value := range cacheUpdates {
+		pairs = append(pairs, key)
+
+		jsonData, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		pairs = append(pairs, string(jsonData))
 	}
 
 	// Set in Redis with 24 hour expiration
-	err = rdb.Set(ctx, key, jsonData, 24*time.Hour).Err()
+	err := rdb.MSet(ctx, pairs...).Err()
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-

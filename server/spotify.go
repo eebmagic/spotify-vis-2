@@ -205,6 +205,7 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 			albumSet[trackItem.Track.Album.ID] = true
 		}
 	}
+	fmt.Println("Total unique albums: ", len(albumSet))
 
 	// Process the images
 	fmt.Printf("Starting image processing: %s\n", time.Now())
@@ -223,32 +224,51 @@ func GetPlaylistTracks(playlistId string, accessToken string) ([]byte, error) {
 
 func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
 	processedItems := make([]ProcessedItem, len(items))
+
+	// Pull the album ids
+	albumIds := make([]string, len(items))
+	for i, item := range items {
+		albumIds[i] = item.Album.ID
+	}
+
+	// Check cache
+	cacheHits, err := GetCache(albumIds)
+	if err != nil {
+		fmt.Println("Error getting cache entries:", err)
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(items))
+	cacheUpdates := make(map[string]CacheEntry)
+	cachMu := sync.Mutex{}
 
 	for i, item := range items {
 		go func(i int, item TrackItem) {
 			defer wg.Done()
 
+			var avgColor Color
+			var commonColor Color
+
 			// Check cache
-			avgColor, commonColor, err := GetCache(item.Album.ID)
-			if err == nil {
-				processedItems[i] = ProcessedItem{Track: item, AvgColor: avgColor, CommonColor: commonColor}
-				return
+			if cacheHits[i] != nil {
+				avgColor = (*cacheHits[i]).AvgColor
+				commonColor = (*cacheHits[i]).CommonColor
+			} else {
+				smallestImage := FindSmallestImage(&item.Album.Images)
+				avgColor, commonColor = ProcessImage(smallestImage)
+				cachMu.Lock()
+				cacheUpdates[item.Album.ID] = CacheEntry{AvgColor: avgColor, CommonColor: commonColor}
+				cachMu.Unlock()
 			}
 
-			smallestImage := FindSmallestImage(&item.Album.Images)
-			avgColor, commonColor = ProcessImage(smallestImage)
-
 			processedItems[i] = ProcessedItem{Track: item, AvgColor: avgColor, CommonColor: commonColor}
-
-			// Update cache
-			SetCache(item.Album.ID, avgColor, commonColor)
 		}(i, item)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
+
+	go SetCache(cacheUpdates)
 
 	return processedItems
 }
