@@ -249,13 +249,15 @@ func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
 			var avgColor Color
 			var commonColor Color
 
-			// Check cache
+			// Check cache hits (nil pointer means nothing came back from Redis for the key)
 			if cacheHits[i] != nil {
 				avgColor = (*cacheHits[i]).AvgColor
 				commonColor = (*cacheHits[i]).CommonColor
 			} else {
 				smallestImage := FindSmallestImage(&item.Album.Images)
 				avgColor, commonColor = ProcessImage(smallestImage)
+
+				// Add values to map of cache updates
 				cachMu.Lock()
 				cacheUpdates[item.Album.ID] = CacheEntry{AvgColor: avgColor, CommonColor: commonColor}
 				cachMu.Unlock()
@@ -268,6 +270,7 @@ func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
 	// Wait for all goroutines to finish
 	wg.Wait()
 
+	// Apply the map of cache updates
 	go SetCache(cacheUpdates)
 
 	return processedItems
