@@ -239,8 +239,7 @@ func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
 
 	var wg sync.WaitGroup
 	wg.Add(len(items))
-	cacheUpdates := make(map[string]CacheEntry)
-	cachMu := sync.Mutex{}
+	cacheUpdates := make([]CacheUpdate, len(items))
 
 	for i, item := range items {
 		go func(i int, item TrackItem) {
@@ -251,16 +250,20 @@ func HandoffItemsForImageProcessing(items []TrackItem) []ProcessedItem {
 
 			// Check cache hits (nil pointer means nothing came back from Redis for the key)
 			if cacheHits[i] != nil {
-				avgColor = (*cacheHits[i]).AvgColor
-				commonColor = (*cacheHits[i]).CommonColor
+				avgColor = HexToColor((*cacheHits[i]).AvgColor)
+				commonColor = HexToColor((*cacheHits[i]).CommonColor)
 			} else {
 				smallestImage := FindSmallestImage(&item.Album.Images)
 				avgColor, commonColor = ProcessImage(smallestImage)
 
 				// Add values to map of cache updates
-				cachMu.Lock()
-				cacheUpdates[item.Album.ID] = CacheEntry{AvgColor: avgColor, CommonColor: commonColor}
-				cachMu.Unlock()
+				cacheUpdates[i] = CacheUpdate{
+					AlbumID: item.Album.ID,
+					Value: CacheEntry{
+						AvgColor:    avgColor.ToHex(),
+						CommonColor: commonColor.ToHex(),
+					},
+				}
 			}
 
 			processedItems[i] = ProcessedItem{Track: item, AvgColor: avgColor, CommonColor: commonColor}

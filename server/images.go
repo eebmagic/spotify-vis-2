@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -15,6 +16,30 @@ type Color struct {
 	G int
 	B int
 }
+
+// ColorToHex converts a Color struct to a hex string representation
+func (c Color) ToHex() string {
+	return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
+}
+
+// HexToColor converts a hex string (e.g. "#ff0000") to a Color struct
+func HexToColor(hex string) Color {
+	// Remove the leading #
+	hex = hex[1:]
+
+	var r, g, b uint8
+	if len(hex) == 6 {
+		fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	}
+
+	return Color{
+		R: int(r),
+		G: int(g),
+		B: int(b),
+	}
+}
+
+
 
 // Download the image and then pass along to compute the main color
 func ProcessImage(spotifyImage *SpotifyImage) (Color, Color) {

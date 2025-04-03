@@ -4,10 +4,12 @@
 - [ ] Paginate through user playlists
     - [ ] Fuzzy search for playlist results
         - Not sure how to handle users with TONS of playlists
+        - This might require unwrapping all the playlists anyways?
 - [ ] Text input box for non-user playlist
 - [x] Thin down tracklist response to minimize payload size
 - [x] Update server `/` to return a frontend build
 - [ ] Embed frontend into compiled binary?
     - [Related ChatGPT thread](https://chatgpt.com/c/67eb583e-2fb0-800d-8a0f-90cf99b19e2d)
 - [x] Cache album colors in redis
-- [ ] Use a redis pipeline to set expiration for updated cache keys
+- [ ] Use a redis pipeline to set expiration for updated cache keys?
+    - Might be better to delete random cache entries when close to overflow?

@@ -8,8 +8,12 @@ import (
 )
 
 type CacheEntry struct {
-	AvgColor    Color `json:"avg_color"`
-	CommonColor Color `json:"common_color"`
+	AvgColor    string `json:"a"` // rgb hex strings
+	CommonColor string `json:"c"`
+}
+type CacheUpdate struct {
+	AlbumID string     `json:"album_id"`
+	Value   CacheEntry `json:"value"`
 }
 
 func GetCache(keys []string) ([]*CacheEntry, error) {
@@ -50,7 +54,7 @@ func GetCache(keys []string) ([]*CacheEntry, error) {
 	return entries, nil
 }
 
-func SetCache(cacheUpdates map[string]CacheEntry) error {
+func SetCache(cacheUpdates []CacheUpdate) error {
 	// Skip if there are no updates
 	if len(cacheUpdates) == 0 {
 		return nil
@@ -58,10 +62,12 @@ func SetCache(cacheUpdates map[string]CacheEntry) error {
 
 	// Convert CacheEntry objs to stringified json
 	pairs := make([]interface{}, 0, len(cacheUpdates)*2)
-	for key, value := range cacheUpdates {
-		pairs = append(pairs, key)
+	for _, update := range cacheUpdates {
+		// Add ablum id to array
+		pairs = append(pairs, update.AlbumID)
 
-		jsonData, err := json.Marshal(value)
+		// Add json string to array
+		jsonData, err := json.Marshal(update.Value)
 		if err != nil {
 			return err
 		}
