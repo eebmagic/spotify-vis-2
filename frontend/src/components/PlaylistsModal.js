@@ -1,20 +1,13 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
 import { ScrollPanel } from 'primereact/scrollpanel';
 import { Toast } from 'primereact/toast';
-import { getPlaylistTracks } from '../helpers/api';
-import TracksModal from './TracksModal';
-import TracksColorWheel from './TracksColorWheel';
 
 const PlaylistsModal = ({ visible, onHide, playlists }) => {
-  const [loading, setLoading] = useState({});
-  const [selectedTracks, setSelectedTracks] = useState(null);
-  const [selectedPlaylistName, setSelectedPlaylistName] = useState('');
-  const [tracksModalVisible, setTracksModalVisible] = useState(false);
-  const [colorWheelVisible, setColorWheelVisible] = useState(false);
-  const toastRef = useRef(null);
+  const navigate = useNavigate();
 
   if (!playlists) return null;
 
@@ -25,36 +18,10 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
     return JSON.stringify(json, null, 2);
   };
 
-  const handleGetPlaylistData = async (playlistId, playlistName) => {
-    setSelectedPlaylistName(playlistName);
-    setTracksModalVisible(true);
-    setLoading(prev => ({ ...prev, [playlistId]: true }));
-
-    try {
-      const data = await getPlaylistTracks(playlistId);
-      setSelectedTracks(data);
-
-      if (toastRef.current) {
-        toastRef.current.show({
-          severity: 'success',
-          summary: 'Success',
-          detail: `Tracks for "${playlistName}" fetched successfully`
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching playlist tracks:', error);
-      if (toastRef.current) {
-        toastRef.current.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: `Failed to fetch tracks for "${playlistName}"`
-        });
-      }
-    } finally {
-      setLoading(prev => ({ ...prev, [playlistId]: false }));
-    }
-  };
-
+  /*
+  Supports the "View Playlist JSON" button.
+  Downloads the playlist data as a JSON file to the user's device.
+  */
   const downloadPlaylistJson = (playlist) => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
       formatJson(playlist)
@@ -69,7 +36,6 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
 
   return (
     <>
-      <Toast ref={toastRef} />
       <Dialog
         header="Your Playlists"
         visible={visible}
@@ -109,21 +75,10 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
                           style={{ padding: '0.5rem' }}
                         />
                         <Button
-                          label="View Tracks"
-                          icon="pi pi-list"
-                          loading={loading[playlist.id]}
-                          onClick={() => handleGetPlaylistData(playlist.id, playlist.name)}
-                          className="p-button-outlined p-button-success"
-                          style={{ padding: '0.5rem' }}
-                        />
-                        <Button
                           label="Color Wheel View"
                           icon="pi pi-chart-pie"
-                          loading={loading[playlist.id]}
                           onClick={() => {
-                            handleGetPlaylistData(playlist.id, playlist.name);
-                            setColorWheelVisible(true);
-                            setTracksModalVisible(false);
+                            navigate(`/playlist?id=${playlist.id}`);
                           }}
                           className="p-button-outlined p-button-info"
                           style={{ padding: '0.5rem' }}
@@ -142,34 +97,6 @@ const PlaylistsModal = ({ visible, onHide, playlists }) => {
           </ScrollPanel>
         </div>
       </Dialog>
-
-      <TracksModal
-        visible={tracksModalVisible}
-        onHide={() => {
-          setTracksModalVisible(false);
-          // Reset tracks data after modal closes
-          setTimeout(() => {
-            setSelectedTracks(null);
-          }, 300);
-        }}
-        tracks={selectedTracks}
-        playlistName={selectedPlaylistName}
-        loading={selectedTracks === null && tracksModalVisible}
-      />
-
-      <TracksColorWheel
-        visible={colorWheelVisible}
-        onHide={() => {
-          setColorWheelVisible(false);
-          // Reset tracks data after modal closes
-          setTimeout(() => {
-            setSelectedTracks(null);
-          }, 300);
-        }}
-        tracks={selectedTracks}
-        playlistName={selectedPlaylistName}
-        loading={selectedTracks === null && colorWheelVisible}
-      />
     </>
   );
 };

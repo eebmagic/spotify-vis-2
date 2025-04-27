@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { ProgressSpinner } from 'primereact/progressspinner';
 
-const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) => {
+const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading, fullPage = true }) => {
   const canvasRef = useRef(null);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [trackDetailsVisible, setTrackDetailsVisible] = useState(false);
@@ -332,146 +332,43 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
     return cleanup;
   }, [visible, loading, tracks]);
 
+  const renderContent = () => (
+    <div className="color-wheel-container" style={{ textAlign: 'center' }}>
+      <canvas
+        ref={canvasRef}
+        width={2400}
+        height={2400}
+        style={{
+          maxWidth: '100%',
+          height: 'auto',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          backgroundColor: '#121212'
+        }}
+      />
+    </div>
+  );
+
   if (loading) {
     return (
-      <Dialog
-        header={`Loading tracks for ${playlistName || 'playlist'}...`}
-        visible={visible}
-        style={{ width: '80vw', maxWidth: '800px' }}
-        onHide={onHide}
-        modal
-        dismissableMask
-      >
-        <div className="flex justify-content-center">
-          <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="5" />
-        </div>
-      </Dialog>
+      <div className="flex justify-content-center p-5">
+        <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="5" />
+      </div>
     );
   }
 
   if (!tracks || !tracks.length) {
-    return (
-      <Dialog
-        header={`Tracks for ${playlistName || 'playlist'}`}
-        visible={visible}
-        style={{ width: '80vw', maxWidth: '800px' }}
-        onHide={onHide}
-        modal
-        dismissableMask
-      >
-        <div className="p-3">
-          <p>No tracks found or there was an error loading the tracks.</p>
-        </div>
-      </Dialog>
-    );
+    return;
   }
 
   return (
     <>
-      <Dialog
-        header={
-          <div className="flex justify-content-between align-items-center">
-            <div style={{ gap: '4px' }}>
-              <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
-                {playlistName || 'playlist'}
-              </span>
-            </div>
-            <div style={{ gap: '4px' }}>
-              <span style={{ color: '#777', fontSize: '0.9rem' }}>
-                {tracks.length} tracks
-              </span>
-            </div>
-          </div>
-        }
-        visible={visible}
-        style={{ width: '90vw', maxWidth: '900px' }}
-        onHide={onHide}
-        modal
-        dismissableMask
-      >
-        <div className="color-wheel-container" style={{ textAlign: 'center' }}>
-          <canvas
-            ref={canvasRef}
-            width={2400}
-            height={2400}
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              backgroundColor: '#121212'
-            }}
-          />
-        </div>
-      </Dialog>
-
-      {/* Track details dialog */}
-      {selectedTrack && (
-        <Dialog
-          visible={trackDetailsVisible}
-          onHide={() => setTrackDetailsVisible(false)}
-          header={selectedTrack.track.name}
-          style={{ width: '400px' }}
-          modal
-          dismissableMask
-        >
-          <div className="flex flex-column align-items-center" style={{ gap: '10px' }}>
-            {selectedTrack.track.album.images[0].url && (
-              <img
-                src={selectedTrack.track.album.images[0].url}
-                alt={selectedTrack.track.album.name}
-                style={{ width: '200px', height: '200px', borderRadius: '8px' }}
-              />
-            )}
-
-            <h4 style={{ margin: '10px 0 5px 0' }}>{selectedTrack.track.name}</h4>
-            <p style={{ margin: '0' }}>
-              {selectedTrack.track.artists?.map(artist => artist.name).join(', ')}
-            </p>
-            <p style={{ margin: '0', fontSize: '0.9em', color: '#666' }}>
-              {selectedTrack.track.album?.name}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0' }}>
-              <span
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  backgroundColor: `rgb(${selectedTrack.commonColor.R}, ${selectedTrack.commonColor.G}, ${selectedTrack.commonColor.B})`,
-                  display: 'inline-block',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
-              />
-              <div>
-                <p style={{ margin: '0' }}>
-                  Common Color: RGB({selectedTrack.commonColor.R}, {selectedTrack.commonColor.G}, {selectedTrack.commonColor.B})
-                </p>
-                <p style={{ margin: '0' }}>
-                  HSV({rgbToHsv(selectedTrack.commonColor.R, selectedTrack.commonColor.G, selectedTrack.commonColor.B).h}°,
-                  {rgbToHsv(selectedTrack.commonColor.R, selectedTrack.commonColor.G, selectedTrack.commonColor.B).s}%,
-                  {rgbToHsv(selectedTrack.commonColor.R, selectedTrack.commonColor.G, selectedTrack.commonColor.B).v}%)
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => window.open(selectedTrack.track.external_urls.spotify, '_blank', 'noopener,noreferrer')}
-              style={{
-                backgroundColor: '#1DB954',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                cursor: 'pointer',
-                marginTop: '10px'
-              }}
-            >
-              Open in Spotify
-            </button>
-          </div>
-        </Dialog>
-      )}
+      <div className="p-3 text-center">
+        <span style={{ color: '#777', fontSize: '0.9rem' }}>
+          {tracks.length} album covers
+        </span>
+      </div>
+      {renderContent()}
     </>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import './App.css';
 import 'primereact/resources/themes/lara-light-indigo/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -12,6 +13,7 @@ import { getUserProfile, logoutUser, getUserPlaylists } from './helpers/api.js';
 import Login from './components/Login.js';
 import UserProfile from './components/UserProfile.js';
 import PlaylistsModal from './components/PlaylistsModal.js';
+import PlaylistPage from './components/PlaylistPage.js';
 import githubMark from './images/github-mark.svg';
 
 function App() {
@@ -39,6 +41,10 @@ function App() {
     try {
       const data = await getUserPlaylists();
       setPlaylists(data);
+
+      // Store playlists in localStorage for access across components
+      localStorage.setItem('user_playlists', JSON.stringify(data));
+
       setPlaylistsModalVisible(true);
       toast.current.show({ severity: 'success', summary: 'Success', detail: 'Playlists fetched successfully' });
     } catch (error) {
@@ -84,7 +90,7 @@ function App() {
     return <Login />;
   }
 
-  return (
+  const HomePage = () => (
     <div className="App">
       <Toast ref={toast} />
       <header className="App-header">
@@ -113,14 +119,14 @@ function App() {
         </div>
 
         <div className="content-container" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
           padding: '20px',
-          marginTop: '50px'
         }}>
           {userProfile && (
-            <div className="user-section" style={{ marginBottom: '30px' }}>
+            <div className="user-section" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}>
               <h2>Welcome, {userProfile.display_name}!</h2>
               <UserProfile user={userProfile} />
               <Button
@@ -141,6 +147,13 @@ function App() {
         </div>
       </header>
     </div>
+  );
+
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/playlist" element={<PlaylistPage />} />
+    </Routes>
   );
 }
 

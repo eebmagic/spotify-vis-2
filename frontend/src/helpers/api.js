@@ -92,3 +92,30 @@ export const getPlaylistTracks = async (playlistId) => {
         throw error;
     }
 };
+
+export const getPlaylistDetails = async (playlistId) => {
+    try {
+        const sessionId = localStorage.getItem('session_id');
+        if (!sessionId) throw new Error('No session ID found');
+        if (!playlistId) throw new Error('No playlist ID provided');
+
+        // Get playlist data from storage
+        const playlists = localStorage.getItem('user_playlists');
+        if (playlists) {
+            const parsedPlaylists = JSON.parse(playlists);
+            if (parsedPlaylists.items) {
+                const playlist = parsedPlaylists.items.find(p => p.id === playlistId);
+                if (playlist) {
+                    return playlist;
+                }
+            }
+        }
+
+        console.log('PLAYLIST NOT FOUND IN STORAGE: ', playlistId);
+        console.log('Returning null (TODO: Implement API call to fetch playlist details)');
+        return null;
+    } catch (error) {
+        console.error('Error fetching playlist details:', error);
+        throw error;
+    }
+};
