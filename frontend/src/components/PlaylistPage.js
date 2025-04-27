@@ -17,6 +17,19 @@ const PlaylistPage = () => {
 
   const playlistId = searchParams.get('id');
 
+  // Handle escape key to go back to home page
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === 'Escape') {
+        navigate('/');
+      }
+    };
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [navigate]);
+
   useEffect(() => {
     if (!playlistId) {
       navigate('/');

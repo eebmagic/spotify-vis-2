@@ -12,7 +12,7 @@ import { getUserProfile, logoutUser, getUserPlaylists } from './helpers/api.js';
 
 import Login from './components/Login.js';
 import UserProfile from './components/UserProfile.js';
-import PlaylistsModal from './components/PlaylistsModal.js';
+import PlaylistsLists from './components/PlaylistsLists.js';
 import PlaylistPage from './components/PlaylistPage.js';
 import githubMark from './images/github-mark.svg';
 
@@ -20,8 +20,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [playlists, setPlaylists] = useState(null);
-  const [playlistsModalVisible, setPlaylistsModalVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
   const toast = useRef(null);
 
   const handleLogout = async () => {
@@ -37,7 +35,6 @@ function App() {
   };
 
   const handleFetchPlaylists = async () => {
-    setLoading(true);
     try {
       const data = await getUserPlaylists();
       setPlaylists(data);
@@ -45,13 +42,10 @@ function App() {
       // Store playlists in localStorage for access across components
       localStorage.setItem('user_playlists', JSON.stringify(data));
 
-      setPlaylistsModalVisible(true);
       toast.current.show({ severity: 'success', summary: 'Success', detail: 'Playlists fetched successfully' });
     } catch (error) {
       console.error('Error fetching playlists:', error);
       toast.current.show({ severity: 'error', summary: 'Error', detail: 'Failed to fetch playlists' });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -72,6 +66,7 @@ function App() {
         try {
           const profile = await getUserProfile();
           setUserProfile(profile);
+          handleFetchPlaylists();
         } catch (error) {
           console.error('Error fetching user profile:', error);
           // If profile fetch fails, user might not be authenticated anymore
@@ -91,7 +86,12 @@ function App() {
   }
 
   const HomePage = () => (
-    <div className="App">
+    <div className="App" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      width: '100%',
+    }}>
       <Toast ref={toast} />
       <header className="App-header">
         <div style={{
@@ -99,7 +99,7 @@ function App() {
           top: '10px',
           left: '10px',
           display: 'flex',
-          gap: '10px'
+          gap: '10px',
         }}>
           <a
             href="https://github.com/eebmagic/spotify-vis-2"
@@ -120,30 +120,20 @@ function App() {
 
         <div className="content-container" style={{
           padding: '20px',
+          paddingTop: '50px',
         }}>
           {userProfile && (
             <div className="user-section" style={{
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
+              alignItems: 'flex-start',
             }}>
-              <h2>Welcome, {userProfile.display_name}!</h2>
               <UserProfile user={userProfile} />
-              <Button
-                label="View Your Playlists"
-                icon="pi pi-list"
-                onClick={handleFetchPlaylists}
-                loading={loading}
-                style={{ marginTop: '20px', backgroundColor: '#1DB954', border: 'none' }}
+              <PlaylistsLists
+                playlists={playlists}
               />
             </div>
           )}
-
-          <PlaylistsModal
-            visible={playlistsModalVisible}
-            onHide={() => setPlaylistsModalVisible(false)}
-            playlists={playlists}
-          />
         </div>
       </header>
     </div>
