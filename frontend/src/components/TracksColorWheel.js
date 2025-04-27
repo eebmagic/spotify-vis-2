@@ -69,20 +69,20 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
       }
     });
 
+    // console.log('DRAWING!')
+    // console.log('tracks', tracks);
+
     // Convert Map values to array for processing
     const uniqueTracks = Array.from(albumMap.values());
 
     // Calculate initial positions for unique album covers
     const positionInfo = uniqueTracks.map(item => {
-      const { R, G, B } = item.commonColor;
+      const { R, G, B } = item.avgColor;
       const { h, s, v } = rgbToHsv(R, G, B);
-      console.log('using rgb', R, G, B);
-      console.log('using hsv', h, s, v);
 
       // Convert HSV to position
       const angle = h * Math.PI / 180;
       const distance = (s / 100) * maxRadius;
-      console.log('using distance', distance);
 
       // Calculate position on canvas
       const x = centerX + distance * Math.cos(angle);
@@ -90,7 +90,7 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
 
       // Album image size (make it proportional to value/brightness)
       // const size = 30 + (v / 100) * 40;
-      const size = 30;
+      const size = 100;
 
       return {
         track: item,
@@ -164,7 +164,6 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
         // Draw counter
         ctx.font = '14px Arial';
         ctx.fillStyle = 'white';
-        ctx.fillText(`Displaying ${positionInfo.length} unique albums`, 10, 20);
 
         if (progress < 1) {
           requestAnimationFrame(animate);
@@ -393,8 +392,8 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
         <div className="color-wheel-container" style={{ textAlign: 'center' }}>
           <canvas
             ref={canvasRef}
-            width={800}
-            height={800}
+            width={2400}
+            height={2400}
             style={{
               maxWidth: '100%',
               height: 'auto',
