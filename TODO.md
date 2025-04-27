@@ -13,3 +13,5 @@
 - [x] Cache album colors in redis
 - [ ] Use a redis pipeline to set expiration for updated cache keys?
     - Might be better to delete random cache entries when close to overflow?
+- [ ] Enforce min distance for outer images
+    - To avoid loose images being "thrown"(?) out from the center
