@@ -370,7 +370,20 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
   return (
     <>
       <Dialog
-        header={`Color Wheel View: ${playlistName || 'playlist'} (${tracks.length} tracks)`}
+        header={
+          <div className="flex justify-content-between align-items-center">
+            <div style={{ gap: '4px' }}>
+              <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
+                {playlistName || 'playlist'}
+              </span>
+            </div>
+            <div style={{ gap: '4px' }}>
+              <span style={{ color: '#777', fontSize: '0.9rem' }}>
+                {tracks.length} tracks
+              </span>
+            </div>
+          </div>
+        }
         visible={visible}
         style={{ width: '90vw', maxWidth: '900px' }}
         onHide={onHide}
@@ -378,7 +391,6 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
         dismissableMask
       >
         <div className="color-wheel-container" style={{ textAlign: 'center' }}>
-          <p>Album covers are arranged by color. The angle represents hue, distance from center represents saturation, and size represents brightness.</p>
           <canvas
             ref={canvasRef}
             width={800}
@@ -391,9 +403,6 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading }) =>
               backgroundColor: '#121212'
             }}
           />
-          <p style={{ marginTop: '10px', fontSize: '0.9em', color: '#666' }}>
-            Click on an album cover to view track details
-          </p>
         </div>
       </Dialog>
 
