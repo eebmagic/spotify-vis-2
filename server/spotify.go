@@ -75,37 +75,88 @@ func GetUserProfile(accessToken string) ([]byte, error) {
 	return body, nil
 }
 
-// GetCurrentUserPlaylists fetches the playlists for the current user
+// GetCurrentUserPlaylists fetches all playlists for the current user, handling pagination
 func GetCurrentUserPlaylists(accessToken string) ([]byte, error) {
-	// Create request to Spotify API
-	endpoint := fmt.Sprintf("%s/me/playlists", SPOTIFY_API_BASE)
-	req, err := http.NewRequest("GET", endpoint, nil)
+	start := time.Now()
+
+	// Define our playlist collection that will hold all playlists
+	type CombinedPlaylistsResponse struct {
+		Items []json.RawMessage `json:"items"`
+		Total int               `json:"total"`
+	}
+
+	var allPlaylists CombinedPlaylistsResponse
+
+	// Start with the base endpoint
+	nextURL := fmt.Sprintf("%s/me/playlists?limit=50", SPOTIFY_API_BASE)
+
+	// Loop until we have no more pages to fetch
+	for nextURL != "" {
+		// Create request to Spotify API
+		req, err := http.NewRequest("GET", nextURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error creating request: %v", err)
+		}
+
+		// Add authorization header
+		req.Header.Add("Authorization", "Bearer "+accessToken)
+
+		// Make the request
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("error making request to Spotify API: %v", err)
+		}
+
+		// Check response status
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return nil, fmt.Errorf("Spotify API returned non-200 status: %d", resp.StatusCode)
+		}
+
+		// Read response body
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("error reading response body: %v", err)
+		}
+
+		// Parse the paginated response
+		var pageResponse PaginatedResponse
+		if err := json.Unmarshal(body, &pageResponse); err != nil {
+			return nil, fmt.Errorf("error parsing response JSON: %v", err)
+		}
+
+		// Set the total count on first page
+		if allPlaylists.Total == 0 {
+			allPlaylists.Total = pageResponse.Total
+		}
+
+		// Parse the items from this page
+		var items []json.RawMessage
+		if err := json.Unmarshal(pageResponse.Items, &items); err != nil {
+			// If items is not an array, it might be a single item
+			items = []json.RawMessage{pageResponse.Items}
+		}
+
+		// Add these items to our collection
+		allPlaylists.Items = append(allPlaylists.Items, items...)
+
+		// Update the URL for the next page, or set to empty string to end the loop
+		nextURL = pageResponse.Next
+
+		fmt.Printf("Fetched playlists page, items: %d, next URL: %s\n", len(items), nextURL)
+	}
+
+	fmt.Printf("Total playlists collected: %d\n", len(allPlaylists.Items))
+	fmt.Printf("Time to collect all playlists: %s\n", time.Since(start))
+
+	// Marshal the combined playlists back to JSON
+	result, err := json.Marshal(allPlaylists)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %v", err)
+		return nil, fmt.Errorf("error marshaling combined playlist list: %v", err)
 	}
 
-	// Add authorization header
-	req.Header.Add("Authorization", "Bearer "+accessToken)
-
-	// Make the request
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error making request to Spotify API: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Spotify API returned non-200 status: %d", resp.StatusCode)
-	}
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %v", err)
-	}
-
-	return body, nil
+	return result, nil
 }
 
 // PaginatedResponse is a generic structure for Spotify's paginated responses
