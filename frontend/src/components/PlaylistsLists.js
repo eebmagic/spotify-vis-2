@@ -16,6 +16,7 @@ const PlaylistsLists = ({ playlists }) => {
     keys: [
       'name',
       'description',
+      'owner.display_name',
     ],
     threshold: 0.4,
     includeScore: true,
@@ -55,7 +56,7 @@ const PlaylistsLists = ({ playlists }) => {
             <InputText
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search playlists by title or description..."
+              placeholder="Search playlists by title, description, or owner name..."
               className="w-full"
               style={{ width: '100%', padding: '0.75rem' }}
             />

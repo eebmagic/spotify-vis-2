@@ -7,6 +7,7 @@ import 'primeicons/primeicons.css';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Image } from 'primereact/image';
+import { ProgressSpinner } from 'primereact/progressspinner';
 
 import { getUserProfile, logoutUser, getUserPlaylists } from './helpers/api.js';
 
@@ -20,6 +21,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [playlists, setPlaylists] = useState(null);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const toast = useRef(null);
 
   const handleLogout = async () => {
@@ -35,6 +37,7 @@ function App() {
   };
 
   const handleFetchPlaylists = async () => {
+    setIsLoadingPlaylists(true);
     try {
       const data = await getUserPlaylists();
       setPlaylists(data);
@@ -46,6 +49,8 @@ function App() {
     } catch (error) {
       console.error('Error fetching playlists:', error);
       toast.current.show({ severity: 'error', summary: 'Error', detail: 'Failed to fetch playlists' });
+    } finally {
+      setIsLoadingPlaylists(false);
     }
   };
 
@@ -129,9 +134,21 @@ function App() {
               alignItems: 'flex-start',
             }}>
               <UserProfile user={userProfile} />
-              <PlaylistsLists
-                playlists={playlists}
-              />
+              {isLoadingPlaylists ? (
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  height: '300px',
+                  gap: '1rem'
+                }}>
+                  <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="4" />
+                  <p style={{ color: '#aaa' }}>Loading playlists...</p>
+                </div>
+              ) : (
+                <PlaylistsLists playlists={playlists} />
+              )}
             </div>
           )}
         </div>
