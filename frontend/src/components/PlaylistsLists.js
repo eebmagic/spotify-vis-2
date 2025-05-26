@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
@@ -6,14 +6,41 @@ import { Divider } from 'primereact/divider';
 import { ScrollPanel } from 'primereact/scrollpanel';
 import { Toast } from 'primereact/toast';
 import { Card } from 'primereact/card';
+import { InputText } from 'primereact/inputtext';
+import Fuse from 'fuse.js';
 
 const PlaylistsLists = ({ playlists }) => {
   const navigate = useNavigate();
-
-  if (!playlists) return null;
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Make sure we have the items property that contains playlists
-  const playlistItems = playlists.items || [];
+  const playlistItems = playlists?.items || [];
+
+  // Configure Fuse.js options for fuzzy search
+  const fuseOptions = {
+    keys: [
+      'name',
+      'description',
+    ],
+    threshold: 0.4,
+    includeScore: true,
+    minMatchCharLength: 2
+  };
+
+  const fuse = useMemo(() => new Fuse(playlistItems, fuseOptions), [playlistItems]);
+
+  // Filter playlists based on search query
+  const filteredPlaylists = useMemo(() => {
+    if (searchQuery.trim().length === 0) {
+      console.log('No search query! Returning all playlists.');
+      return playlistItems;
+    }
+    
+    const results = fuse.search(searchQuery.trim());
+    return results.map(result => result.item);
+  }, [searchQuery, fuse, playlistItems]);
+
+  if (!playlists) return null;
 
   const formatJson = (json) => {
     return JSON.stringify(json, null, 2);
@@ -38,12 +65,28 @@ const PlaylistsLists = ({ playlists }) => {
   return (
     <>
         <div className="playlists-container">
+          {/* Search input */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <InputText
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search playlists by title or description..."
+              className="w-full"
+              style={{ width: '100%', padding: '0.75rem' }}
+            />
+          </div>
+
           {/* <ScrollPanel style={{ width: '100%', height: '60vh' }} className="custombar1"> */}
             {playlistItems.length > 0 ? (
               <div>
-                <h3>Total Playlists: {playlistItems.length}</h3>
+                <h3>
+                  {searchQuery.trim() ? 
+                    `Found ${filteredPlaylists.length} of ${playlistItems.length} playlists` : 
+                    `Total Playlists: ${playlistItems.length}`
+                  }
+                </h3>
                 <div className="playlist-list">
-                  {playlistItems.map((playlist, index) => (
+                  {filteredPlaylists.map((playlist, index) => (
                     <Card
                       key={playlist.id}
                       className="playlist-item"
@@ -117,7 +160,7 @@ const PlaylistsLists = ({ playlists }) => {
               </div>
             ) : (
               <div className="empty-playlists">
-                <p>No playlists found.</p>
+                <p>{searchQuery.trim() ? 'No playlists match your search.' : 'No playlists found.'}</p>
               </div>
             )}
           {/* </ScrollPanel> */}
