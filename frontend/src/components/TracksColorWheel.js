@@ -363,11 +363,6 @@ const TracksColorWheel = ({ visible, onHide, tracks, playlistName, loading, full
 
   return (
     <>
-      <div className="p-3 text-center">
-        <span style={{ color: '#777', fontSize: '0.9rem' }}>
-          {tracks.length} album covers
-        </span>
-      </div>
       {renderContent()}
     </>
   );

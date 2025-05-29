@@ -176,7 +176,7 @@ const PlaylistPage = () => {
                   <div style={{ display: 'flex', gap: '15px' }}>
                     {playlistDetails.tracks && (
                       <p style={{ margin: '0' }}>
-                        {playlistDetails.tracks.total || (tracks ? tracks.length : 0)} tracks
+                        {playlistDetails.tracks.total} tracks (from {tracks.length} albums)
                       </p>
                     )}
                     {playlistDetails.followers && (
