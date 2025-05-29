@@ -1,10 +1,11 @@
 - [x] Go server image processing
 - [x] Async image processing over track items
 - [x] Compare with Common vs Average color
-- [ ] Paginate through user playlists
-    - [ ] Fuzzy search for playlist results
+- [x] Paginate through user playlists
+    - [x] Fuzzy search for playlist results
         - Not sure how to handle users with TONS of playlists
         - This might require unwrapping all the playlists anyways?
+        - Current soln is to just pull all. Avg users have <300 playlists
 - [ ] Text input box for non-user playlist
 - [x] Thin down tracklist response to minimize payload size
 - [x] Update server `/` to return a frontend build
