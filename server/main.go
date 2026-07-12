@@ -463,7 +463,13 @@ func main() {
 		http.ServeFile(w, r, "../frontend/build/index.html")
 	})
 
-	log.Println("Server starting on port 3026...")
+    portStr := os.Getenv("SERVER_PORT")
+    if portStr == "" {
+        portStr = "3026"
+    } 
+    addr := ":" + portStr
+
+	log.Printf("Server starting on port %s ...\n", portStr)
 	log.Println("Serving frontend from ../frontend/build")
-	http.ListenAndServe(":3026", nil)
+	http.ListenAndServe(addr, nil)
 }
